@@ -1,8 +1,18 @@
 // Cars: low-poly meshes built from boxes and cylinders, and the arcade
-// driving model every car in Solmar Bay shares — player, traffic, police.
+// driving model every car in Santa Aurelia shares — player, traffic, police.
+// Every car has a name and a condition, shown on the HUD while driving.
 import * as THREE from '../vendor/three.module.min.js';
 import { CAR_TUNING } from './config.js';
 import { collideCircle } from './city.js';
+
+// Names the HUD shows for each body type. Original names, all ours.
+export const CAR_NAMES = {
+  sedan: ['Aurora Sedan', 'Marisol Cruiser', 'Vega Four-Door'],
+  sports: ['Comet GT', 'Falcon SS', 'Vesper Roadster'],
+  taxi: ['Aurelia Cab', 'Sunset Taxi'],
+  van: ['Hauler Van', 'Docks Van'],
+  police: ['SAPD Cruiser'],
+};
 
 const BODY = {
   sedan: { w: 2.0, l: 4.4, h: 0.72, cabinL: 2.2, cabinH: 0.62, y: 0.62 },
@@ -39,9 +49,9 @@ export function createCarMesh(type, color) {
   if (type === 'taxi') {
     box(0.9, 0.22, 0.4, new THREE.MeshStandardMaterial({ color: 0xfff6c9, emissive: 0xffedb0, emissiveIntensity: 0.5 }), 0, spec.y + spec.h / 2 + spec.cabinH + 0.16, -0.25);
   }
-  // Headlights, taillights, bumpers.
-  const headMat = new THREE.MeshStandardMaterial({ color: 0xfff8d0, emissive: 0xfff2b0, emissiveIntensity: 0.9 });
-  const tailMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, emissive: 0x881111, emissiveIntensity: 0.7 });
+  // Headlights, taillights, bumpers. Golden hour: the headlights are on.
+  const headMat = new THREE.MeshStandardMaterial({ color: 0xfff8d0, emissive: 0xfff2b0, emissiveIntensity: 1.6 });
+  const tailMat = new THREE.MeshStandardMaterial({ color: 0xcc2222, emissive: 0x881111, emissiveIntensity: 1.1 });
   box(0.42, 0.18, 0.08, headMat, -0.68, spec.y + 0.08, spec.l / 2 + 0.01);
   box(0.42, 0.18, 0.08, headMat, 0.68, spec.y + 0.08, spec.l / 2 + 0.01);
   box(0.42, 0.18, 0.08, tailMat, -0.68, spec.y + 0.08, -spec.l / 2 - 0.01);
@@ -102,6 +112,9 @@ export class ArcadeCar {
     this.type = mesh.userData.type;
     this.isPolice = this.type === 'police';
     this.isPlayer = false;
+    // A name for the HUD: the mission cars are named, the rest take the
+    // first name of their body type (deterministic, no RNG here).
+    this.name = options.name || (CAR_NAMES[this.type] ? CAR_NAMES[this.type][0] : 'Street Car');
     this.sirenPhase = 0;
     this.smoking = false;
     this.dead = false;

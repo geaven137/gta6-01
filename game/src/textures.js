@@ -24,12 +24,13 @@ export function makeGroundTexture(roads) {
   return canvasTexture(size, size, (ctx) => {
     ctx.fillStyle = '#8a9a72';
     ctx.fillRect(0, 0, size, size);
-    // Sand beach + sea on the east edge.
-    ctx.fillStyle = '#e9d9a4';
+    // Sand beach + sea on the east edge. Golden hour: warm sand, a deep
+    // teal sea, and amber glints on the water.
+    ctx.fillStyle = '#e9c98a';
     ctx.fillRect(toPx(CITY.beachX), 0, toPx(CITY.waterX) - toPx(CITY.beachX), size);
-    ctx.fillStyle = '#2f7fa6';
+    ctx.fillStyle = '#3d6a8a';
     ctx.fillRect(toPx(CITY.waterX), 0, size - toPx(CITY.waterX), size);
-    ctx.fillStyle = '#7fc3d9';
+    ctx.fillStyle = '#f2c48d';
     for (let y = 0; y < size; y += 46) {
       ctx.fillRect(toPx(CITY.waterX) + 8, y, 60, 3);
     }
@@ -91,7 +92,8 @@ export function makeFacadeTexture(rng, baseColor, floors, cols) {
     const ch = h / floors;
     for (let f = 0; f < floors; f++) {
       for (let c = 0; c < cols; c++) {
-        const lit = rng() < 0.28;
+        // Golden hour: nearly half the windows are already lit.
+        const lit = rng() < 0.45;
         ctx.fillStyle = lit ? '#ffe9a8' : (rng() < 0.5 ? '#4a6a7c' : '#5d8296');
         ctx.fillRect(c * cw + cw * 0.22, f * ch + ch * 0.25, cw * 0.56, ch * 0.5);
         ctx.fillStyle = 'rgba(255,255,255,0.25)';
@@ -139,6 +141,22 @@ export function makeCashTexture() {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('$50', w / 2, h / 2 + 2);
+  });
+}
+
+// Floating ammo pickup: an orange supply crate face.
+export function makeAmmoTexture() {
+  return canvasTexture(128, 64, (ctx, w, h) => {
+    ctx.fillStyle = '#b45a1b';
+    ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#ffd9a8';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(5, 5, w - 10, h - 10);
+    ctx.fillStyle = '#fff3e0';
+    ctx.font = 'bold 30px system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('AMMO', w / 2, h / 2 + 2);
   });
 }
 

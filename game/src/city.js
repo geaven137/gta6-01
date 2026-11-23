@@ -1,6 +1,6 @@
-// Procedural Solmar Bay: a sun-soaked grid city built from a seed — roads,
-// blocks, towers, palms, beach, docks — plus the collision and road-network
-// helpers every other system drives on.
+// Procedural Santa Aurelia: a golden-hour grid city built from a seed —
+// roads, blocks, towers, palms, beach, docks, a lighthouse — plus the
+// collision and road-network helpers every other system drives on.
 import * as THREE from '../vendor/three.module.min.js';
 import { CITY, PALETTE, PLACES } from './config.js';
 import { range, rangeInt, pick, chance, hash2 } from './random.js';
@@ -213,11 +213,12 @@ export function buildCity(scene, rng) {
     scene.add(palm);
   }
 
-  // Billboards with original Solmar advertising.
+  // Billboards with original Santa Aurelia advertising.
   const signs = [
-    { text: ['SOLMAR BAY', 'SUN • SEA • SPEED'], x: -29, z: -87, rotY: 0 },
+    { text: ['SANTA AURELIA', 'SUN • SEA • SPEED'], x: -29, z: -87, rotY: 0 },
     { text: ['DELGADO MOTORS', 'CARS • CASH • NO QUESTIONS'], x: 87, z: 87, rotY: Math.PI / 2 },
     { text: ['HOTEL MIRAMONTE', 'SLEEP LIKE A KINGPIN'], x: -145, z: -29, rotY: 0 },
+    { text: ['GOLDEN TIDE', 'THE SUN SETS AT 17:41'], x: 29, z: 145, rotY: Math.PI },
   ];
   for (const s of signs) {
     const board = new THREE.Group();
@@ -258,6 +259,28 @@ export function buildCity(scene, rng) {
   pier.position.set(246, 0.4, 145);
   pier.castShadow = true;
   scene.add(pier);
+
+  // Lighthouse on the beach: a golden-hour silhouette at the east edge.
+  const lightTower = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.2, 3.2, 22, 10),
+    new THREE.MeshStandardMaterial({ color: 0xf2e8d8, roughness: 0.85 }),
+  );
+  lightTower.position.set(232, 11, -120);
+  lightTower.castShadow = true;
+  scene.add(lightTower);
+  const lightBand = new THREE.Mesh(
+    new THREE.CylinderGeometry(2.45, 2.65, 3, 10),
+    new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.85 }),
+  );
+  lightBand.position.set(232, 15, -120);
+  scene.add(lightBand);
+  const lampRoom = new THREE.Mesh(
+    new THREE.SphereGeometry(1.6, 10, 8),
+    new THREE.MeshStandardMaterial({ color: 0xfff2b0, emissive: 0xffedb0, emissiveIntensity: 1.8 }),
+  );
+  lampRoom.position.set(232, 23, -120);
+  scene.add(lampRoom);
+  colliders.push({ minX: 229, maxX: 235, minZ: -123, maxZ: -117 });
 
   const city = {
     roads,
