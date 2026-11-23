@@ -109,3 +109,34 @@ html, body {
 .end-red { color: #ff5a3c !important; }
 
 #error { position: fixed; left: 8px; top: 8px; z-index: 50; display: none; max-width: 60vw; background: #7a1111; color: #fff; font: 13px monospace; padding: 8px 10px; border-radius: 6px; }
+
+/* V3: district standing, crew panel, race HUD, shop overlays. */
+#district { margin-top: 8px; background: rgba(8,16,24,.55); border: 1px solid rgba(255,255,255,.22); border-radius: 8px; padding: 7px 12px; max-width: 240px; }
+#district-name { font-size: 13px; font-weight: 800; letter-spacing: .05em; color: #ffd23c; }
+#district-bar { height: 5px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.3); border-radius: 3px; margin-top: 5px; overflow: hidden; }
+#district-fill { height: 100%; width: 0; background: linear-gradient(90deg, #2ecc71, #7dff9e); transition: width .3s; }
+#crew-panel { margin-top: 10px; background: rgba(8,16,24,.55); border: 1px solid rgba(255,255,255,.22); border-radius: 8px; padding: 7px 12px; max-width: 240px; }
+.panel-title { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: #ffd23c; margin-bottom: 4px; }
+.panel-hint { color: #cfd8de; font-weight: 700; letter-spacing: 0; }
+.crew-row { display: flex; gap: 8px; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.crew-row.empty { color: #cfd8de; font-weight: 600; }
+.crew-name { color: #fff; }
+.crew-role { color: #7dff9e; }
+.crew-ability { color: #cfd8de; margin-left: auto; font-size: 12px; }
+#race { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); display: none; text-align: center; background: rgba(8,16,24,.62); border: 1px solid rgba(255,154,60,.6); border-radius: 10px; padding: 8px 22px; }
+#race-pos { font-size: 24px; font-weight: 900; color: #ff9a3c; letter-spacing: .04em; }
+#race-gate { font-size: 13px; font-weight: 800; letter-spacing: .12em; margin-top: 1px; }
+#race-time { font-size: 16px; font-weight: 800; color: #ffd23c; font-variant-numeric: tabular-nums; margin-top: 1px; }
+.weapon-slot.locked { opacity: .45; border-style: dashed; }
+.weapon-slot.locked .weapon-name { color: #8b98a1; }
+.menu-panel.shop { max-width: 620px; text-align: left; max-height: 86vh; overflow-y: auto; }
+.menu-panel.shop h2 { text-align: center; }
+.shop-row { border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 12px 16px; margin: 10px 0; background: rgba(255,255,255,.04); }
+.shop-name { font-size: 17px; font-weight: 800; }
+.shop-desc { font-size: 13px; color: #cfd8de; margin: 3px 0 8px; line-height: 1.4; }
+.shop-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.shop-btn { padding: 8px 14px; font-size: 14px; font-weight: 800; color: #fff; background: rgba(255,210,60,.16); border: 1px solid rgba(255,210,60,.6); border-radius: 7px; cursor: pointer; pointer-events: auto; }
+.shop-btn:hover { background: rgba(255,210,60,.32); }
+.shop-lock { font-size: 13px; font-weight: 700; color: #8b98a1; }
+.shop-active { font-size: 13px; font-weight: 800; color: #7dff9e; }
+.shop-max { font-size: 13px; font-weight: 700; color: #ffd23c; }

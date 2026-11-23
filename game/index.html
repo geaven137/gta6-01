@@ -14,10 +14,23 @@
   <div id="top-left">
     <div id="location">Santa Aurelia</div>
     <div id="clock">17:41</div>
+    <div id="district">
+      <div id="district-name">Downtown Aurelia · NEUTRAL</div>
+      <div id="district-bar"><div id="district-fill"></div></div>
+    </div>
     <div id="radio">
       <div id="radio-station">♪ Sol FM 94.7</div>
       <div id="radio-track">'Amber Sky' — Los Dorados</div>
     </div>
+    <div id="crew-panel">
+      <div class="panel-title">CREW <span class="panel-hint">[C] recruit</span></div>
+      <div id="crew-rows"></div>
+    </div>
+  </div>
+  <div id="race">
+    <div id="race-pos">1st / 3</div>
+    <div id="race-gate">CHECKPOINT 1/3</div>
+    <div id="race-time">0:00</div>
   </div>
   <div id="top-right">
     <div id="wanted-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
@@ -63,7 +76,8 @@
     <p class="tagline">Sun. Sea. Somewhere to be — fast.</p>
     <p class="story">Mara Voss owes Delgado, and Delgado always collects. Nine jobs stand
     between her and freedom in Santa Aurelia: fares, heists, a vault, a street
-    race — and one last getaway under the golden-hour sun.</p>
+    race — and one last getaway under the golden-hour sun. Build a crew, win
+    the Bowl races, earn the districts' trust, and fill Rosa's garage.</p>
     <button id="btn-continue" class="menu-btn primary">Continue</button>
     <button id="btn-start" class="menu-btn primary">New Game</button>
     <div class="controls">
@@ -73,6 +87,8 @@
       <div><b>Click</b> punch / shoot</div>
       <div><b>1–4 / Q / wheel</b> weapons</div>
       <div><b>R</b> reload &nbsp; <b>F</b> radio</div>
+      <div><b>C</b> crew &nbsp; <b>T</b> race at the Bowl</div>
+      <div><b>E</b> at Rosa's garage to shop</div>
       <div><b>Shift</b> run &nbsp; <b>Space</b> handbrake</div>
       <div><b>Esc</b> pause &nbsp; <b>M</b> sound</div>
     </div>
@@ -106,6 +122,25 @@
     <h2 id="end-title">BUSTED</h2>
     <p id="end-text" class="story"></p>
     <button id="btn-respawn" class="menu-btn primary">Back on the street</button>
+  </div>
+</div>
+
+<div id="garage-panel" class="overlay">
+  <div class="menu-panel shop">
+    <h2>ROSA'S GARAGE</h2>
+    <p id="garage-cash" class="story"></p>
+    <div id="garage-list"></div>
+    <button id="btn-garage-close" class="menu-btn primary">Back to the street</button>
+  </div>
+</div>
+
+<div id="crew-overlay" class="overlay">
+  <div class="menu-panel shop">
+    <h2>THE CREW</h2>
+    <p class="story">Specialists for the big jobs. Each one changes how missions play.</p>
+    <p id="crew-cash" class="story"></p>
+    <div id="crew-list"></div>
+    <button id="btn-crew-close" class="menu-btn primary">Back to the street</button>
   </div>
 </div>
 
