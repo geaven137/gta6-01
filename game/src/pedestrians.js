@@ -1,9 +1,15 @@
 // Pedestrians: sidewalk walkers with a simple walk cycle who flee gunshots
 // and fast cars, and go down when hit. One humanoid builder serves peds and
-// the player, with different clothes.
+// the player, with different clothes. Locals have names for the chatter.
 import * as THREE from '../vendor/three.module.min.js';
 import { PALETTE } from './config.js';
 import { range, pick } from './random.js';
+
+// First names for Santa Aurelia locals (used by the chatter system).
+export const PED_NAMES = [
+  'Ana', 'Marco', 'Luz', 'Tomas', 'Elena', 'Rico', 'Sofia', 'Diego',
+  'Carmen', 'Luis', 'Nina', 'Pablo', 'Isabel', 'Jorge', 'Marta', 'Felix',
+];
 
 export function buildHumanoid({ shirt, pants, skin, capColor = null }) {
   const group = new THREE.Group();
@@ -83,6 +89,7 @@ export class PedestrianManager {
       scene.add(mesh);
       this.peds.push({
         mesh,
+        name: PED_NAMES[Math.floor(rng() * PED_NAMES.length)],
         heading: range(rng, 0, Math.PI * 2),
         speed: range(rng, 1.2, 2.0),
         target: city.randomSidewalkPoint(rng),

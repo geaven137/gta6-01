@@ -48,9 +48,9 @@ export class ChaseCamera {
     let fov = 62;
     if (mode === 'menu') {
       this.menuAngle += dt * 0.045;
-      const cx = Math.sin(this.menuAngle) * 130;
-      const cz = Math.cos(this.menuAngle) * 130;
-      this.position.lerp(new THREE.Vector3(cx, 58, cz), Math.min(1, dt * 1.5));
+      const cx = Math.sin(this.menuAngle) * 150;
+      const cz = Math.cos(this.menuAngle) * 150;
+      this.position.lerp(new THREE.Vector3(cx, 46, cz), Math.min(1, dt * 1.5));
       this.lookTarget.lerp(new THREE.Vector3(0, 4, 0), Math.min(1, dt * 1.5));
       this.camera.position.copy(this.position);
       this.camera.lookAt(this.lookTarget);

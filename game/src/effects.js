@@ -87,6 +87,12 @@ export class ParticleEffects {
     slot.life = slot.maxLife = life;
   }
 
+  // Handbrake skid: a quick pale puff at the rear wheels.
+  skid(pos) {
+    this.smoke(pos, 1.4, 0.7);
+    this.burst(pos, 0xd8d2c4, 3, 1.5, 0.3, -2);
+  }
+
   tracer(from, to) {
     const t = this.tracers[this.tracerCursor];
     this.tracerCursor = (this.tracerCursor + 1) % this.tracers.length;

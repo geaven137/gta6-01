@@ -32,11 +32,11 @@ export class Minimap {
     ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
     ctx.clip();
 
-    // Base + water + beach.
+    // Base + water + beach. Golden hour: the sea reads warm, not cold blue.
     ctx.fillStyle = '#16222c';
     ctx.fillRect(0, 0, size, size);
     const water = this._toMap(CITY.waterX, 0);
-    ctx.fillStyle = '#1d5c7a';
+    ctx.fillStyle = '#274b66';
     ctx.fillRect(water.x, 0, size - water.x, size);
     const beach = this._toMap(CITY.beachX, 0);
     ctx.fillStyle = '#8a7a4a';
@@ -99,6 +99,21 @@ export class Minimap {
       ctx.beginPath();
       ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
       ctx.fill();
+    }
+    // Roadblocks: orange squares. HAWK-1: a gold ring.
+    ctx.fillStyle = '#ff9a3c';
+    for (const car of police.roadblockCars()) {
+      const p = this._toMap(car.position.x, car.position.z);
+      ctx.fillRect(p.x - 2.5, p.y - 2.5, 5, 5);
+    }
+    const heli = police.heliPosition();
+    if (heli) {
+      const p = this._toMap(heli.x, heli.z);
+      ctx.strokeStyle = '#ffd23c';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+      ctx.stroke();
     }
     // Player arrow.
     const pp = this._toMap(player.position.x, player.position.z);

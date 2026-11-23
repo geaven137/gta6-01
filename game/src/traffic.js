@@ -185,6 +185,19 @@ export class TrafficManager {
     return false;
   }
 
+  // Traffic pulls over for a siren: a fast police car nearby makes the
+  // car ahead brake and hold its lane until the cruiser passes.
+  _policeBearingDown(t, allCars) {
+    const { car } = t;
+    for (const other of allCars) {
+      if (!other.isPolice || other === car || other.dead) continue;
+      if (Math.abs(other.speed) < 12) continue;
+      const d = Math.hypot(other.position.x - car.position.x, other.position.z - car.position.z);
+      if (d < 18) return true;
+    }
+    return false;
+  }
+
   update(dt, playerPos, allCars) {
     for (const t of this.cars) {
       const { car } = t;
@@ -216,6 +229,7 @@ export class TrafficManager {
       const steer = THREE.MathUtils.clamp(wrapAngle(desired - car.heading) * 2.2, -1, 1);
       let throttle = distWp < 14 ? 0.3 : 0.6;
       if (this._blockedAhead(t, allCars)) throttle = car.speed > 1 ? -0.8 : 0;
+      if (this._policeBearingDown(t, allCars)) throttle = car.speed > 0.5 ? -1 : 0;
       if (car.speed < 0.4 && throttle > 0) {
         t.stuck += dt;
         if (t.stuck > 4) {

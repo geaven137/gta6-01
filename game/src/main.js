@@ -1,8 +1,9 @@
-// Solmar Heat — entry point. Builds the renderer, the city and every system,
+// Golden Tide — entry point. Builds the renderer, the city and every system,
 // then runs the game loop: input, player, traffic, pedestrians, police,
-// missions, collisions, camera, HUD and sound.
+// missions, collisions, camera, HUD and sound. The whole game is shot at
+// golden hour: a low amber sun in the west, 17:41 on the clock.
 import * as THREE from '../vendor/three.module.min.js';
-import { PLACES, PLAYER_TUNING, ECONOMY, WANTED_TUNING, PALETTE } from './config.js';
+import { PLACES, PLAYER_TUNING, ECONOMY, WANTED_TUNING, PALETTE, GOLDEN_HOUR } from './config.js';
 import { createRng } from './random.js';
 import { buildCity } from './city.js';
 import { Input } from './input.js';
@@ -10,8 +11,8 @@ import { PlayerController } from './player.js';
 import { TrafficManager, findNearestCar } from './traffic.js';
 import { PedestrianManager } from './pedestrians.js';
 import { WantedSystem } from './police.js';
-import { MissionManager } from './missions.js';
-import { CashPickupField } from './pickups.js';
+import { MissionManager, CHATTER } from './missions.js';
+import { CashPickupField, AmmoPickupField } from './pickups.js';
 import { CombatSystem } from './combat.js';
 import { ParticleEffects } from './effects.js';
 import { Hud } from './hud.js';
@@ -21,7 +22,7 @@ import { SoundBank } from './audio.js';
 import { loadSave, storeSave, defaultSave } from './save.js';
 import { stageScreenshot } from './shots.js';
 
-export class SolmarGame {
+export class GoldenTideGame {
   constructor() {
     const params = new URLSearchParams(window.location.search);
     this.params = params;
@@ -35,25 +36,27 @@ export class SolmarGame {
     this.vistaMode = false;
     this.endKind = 'busted';
     this.smokeTimer = 0;
+    this.chatterTimer = 30;
+    this.skidTimer = 0;
     this.save = loadSave();
 
-    // Renderer: warm sun-soaked look, soft shadows, ACES tone mapping.
+    // Renderer: golden-hour look — warm low sun, long soft shadows, ACES.
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = GOLDEN_HOUR.exposure;
     document.getElementById('app').appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(PALETTE.sky);
-    this.scene.fog = new THREE.Fog(PALETTE.fog, 220, 580);
+    this.scene.fog = new THREE.Fog(PALETTE.fog, 200, 520);
     this.camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 1200);
     this.camera.position.set(0, 40, 120);
 
-    this.sun = new THREE.DirectionalLight(PALETTE.sun, 3.0);
+    this.sun = new THREE.DirectionalLight(GOLDEN_HOUR.sunColor, GOLDEN_HOUR.sunIntensity);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
     this.sun.shadow.camera.left = -130;
@@ -61,12 +64,12 @@ export class SolmarGame {
     this.sun.shadow.camera.top = 130;
     this.sun.shadow.camera.bottom = -130;
     this.sun.shadow.camera.near = 10;
-    this.sun.shadow.camera.far = 420;
+    this.sun.shadow.camera.far = 520;
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.4;
     this.scene.add(this.sun, this.sun.target);
-    this.scene.add(new THREE.HemisphereLight(0xbfd9ff, 0x8a7a5a, 1.6));
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    this.scene.add(new THREE.HemisphereLight(GOLDEN_HOUR.hemiSky, GOLDEN_HOUR.hemiGround, GOLDEN_HOUR.hemiIntensity));
+    this.scene.add(new THREE.AmbientLight(GOLDEN_HOUR.ambientColor, GOLDEN_HOUR.ambientIntensity));
 
     // World and systems.
     this.city = buildCity(this.scene, this.rng);
@@ -74,11 +77,12 @@ export class SolmarGame {
     this.effects = new ParticleEffects(this.scene);
     this.audio = new SoundBank();
     this.player = new PlayerController(this.scene, PLACES.playerStart);
-    this.traffic = new TrafficManager(this.scene, this.city, this.rng, 14);
+    this.traffic = new TrafficManager(this.scene, this.city, this.rng, 16);
     this.peds = new PedestrianManager(this.scene, this.city, this.rng, 22);
     this.police = new WantedSystem(this.scene, this.city, this.rng);
     this.missions = new MissionManager(this.scene, this.city);
     this.pickups = new CashPickupField(this.scene, this.city, this.rng, 12);
+    this.ammoPickups = new AmmoPickupField(this.scene, this.city, this.rng, 4);
     this.combat = new CombatSystem(this.scene, this.camera, this.effects);
     this.chaseCam = new ChaseCamera(this.camera);
     this.minimap = new Minimap(document.getElementById('minimap'), this.city);
@@ -104,15 +108,15 @@ export class SolmarGame {
     if (!stageScreenshot(this, params)) {
       window.__shotReady = true;
     }
-    window.__solmar = this;
+    window.__goldenTide = this;
   }
 
   allCars() {
-    return [...this.traffic.allCars(), ...this.police.cars(), ...this.missions.missionCars(), ...this.extraCars];
+    return [...this.traffic.allCars(), ...this.police.cars(), ...this.police.roadblockCars(), ...this.missions.missionCars(), ...this.extraCars];
   }
 
   saveGame() {
-    storeSave({ cash: this.cash, reputation: this.reputation, missionIndex: this.missions.index });
+    storeSave({ cash: this.cash, reputation: this.reputation, missionIndex: this.missions.index, weapon: this.combat.weaponIndex });
   }
 
   beginPlay(useSave) {
@@ -120,6 +124,7 @@ export class SolmarGame {
       this.cash = this.save.cash;
       this.reputation = this.save.reputation;
       this.missions.index = this.save.missionIndex;
+      if (typeof this.save.weapon === 'number') this.combat.selectWeapon(this.save.weapon);
     } else {
       const fresh = defaultSave();
       this.cash = fresh.cash;
@@ -202,10 +207,10 @@ export class SolmarGame {
     const p = this.player.position;
     if (p.x > 205) return 'South Beach';
     if (Math.hypot(p.x - PLACES.docks.x, p.z - PLACES.docks.z) < 45) return 'South Docks';
-    if (Math.hypot(p.x, p.z) < 70) return 'Downtown Solmar';
+    if (Math.hypot(p.x, p.z) < 70) return 'Downtown Aurelia';
     if (p.x < -140 && p.z < -100) return 'Northside';
     if (p.x < -140) return 'West End';
-    return 'Solmar Bay';
+    return 'Santa Aurelia';
   }
 
   handleCarEntry() {
@@ -222,7 +227,7 @@ export class SolmarGame {
     if (!car || car.dead) return;
     player.enterCar(car);
     this.police.addHeat(6, 'stolen car');
-    this.hud.flashMessage('Nice ride. Try not to scratch it.', 2.5);
+    this.hud.flashMessage(`${car.name}. Try not to scratch it.`, 2.5);
   }
 
   handleImpact(impact) {
@@ -342,6 +347,18 @@ export class SolmarGame {
     if (car && !car.dead) this.hud.setPrompt('[E] Get in car');
   }
 
+  // Free-roam chatter: every so often a local says something. Never while
+  // a mission dialogue is showing.
+  updateChatter(dt) {
+    this.chatterTimer -= dt;
+    if (this.chatterTimer > 0) return;
+    this.chatterTimer = 35 + this.rng() * 25;
+    if (this.missions.active || this.state !== 'playing') return;
+    if (this.hud.dialogueTimer > 0) return;
+    const line = CHATTER[Math.floor(this.rng() * CHATTER.length)];
+    this.hud.showDialogue(line[0], line[1], 4.5);
+  }
+
   update(dt) {
     this.time += dt;
     const { input, player } = this;
@@ -349,6 +366,10 @@ export class SolmarGame {
     if (input.pressed('KeyM')) {
       const muted = this.audio.toggleMute();
       this.hud.flashMessage(muted ? 'Sound off' : 'Sound on', 2);
+    }
+    if (input.pressed('KeyF')) {
+      const st = this.audio.nextStation();
+      this.hud.flashMessage(`${st.name} — ${st.track}`, 3);
     }
     if (input.pressed('Escape')) {
       if (this.state === 'playing') {
@@ -362,26 +383,45 @@ export class SolmarGame {
     if (this.state !== 'playing') {
       // Clicks queued while paused or in a menu must not fire on resume.
       this.input.consumeClicks();
+      this.input.consumeWheel();
     }
 
     if (this.state === 'playing') {
       this.hud.setPrompt(null); // systems re-set it below as needed
       if (input.pressed('KeyE')) this.handleCarEntry();
+      // Weapon keys: 1-4 select, Q cycles, R reloads, wheel cycles.
+      for (let i = 0; i < 4; i++) {
+        if (input.pressed('Digit' + (i + 1))) this.combat.selectWeapon(i, this.hud);
+      }
+      if (input.pressed('KeyQ')) this.combat.cycleWeapon(1, this.hud);
+      if (input.pressed('KeyR')) this.combat.reload(this.hud);
+      const wheel = input.consumeWheel();
+      if (wheel !== 0) this.combat.cycleWeapon(wheel > 0 ? 1 : -1, this.hud);
       for (const click of input.consumeClicks()) {
         if (click.button === 0) this.combat.punchOrShoot(this);
       }
+      // Automatic weapons keep firing while the trigger is held.
+      if (input.mouseDown && this.combat.currentWeapon().auto) this.combat.shoot(this);
       const impact = player.update(dt, input, this.chaseCam.lookYaw, this.city);
       if (impact) this.handleImpact(impact);
+      // Handbrake at speed kicks up a skid puff.
+      this.skidTimer -= dt;
+      if (player.state === 'driving' && input.down('Space') && Math.abs(player.car.speed) > 12 && this.skidTimer <= 0) {
+        this.skidTimer = 0.12;
+        this.effects.skid(player.car.position.clone().setY(0.3));
+      }
       this.traffic.update(dt, player.position, this.allCars());
       this.peds.update(dt, player.position, this.allCars());
       this.police.update(dt, this);
       this.pickups.update(dt, this);
+      this.ammoPickups.update(dt, this);
       this.missions.update(dt, this);
       this.combat.update(dt);
       this.handleCarPedCollisions();
       this.handleCarCarCollisions();
       this.handleSmokingCars(dt);
       this.handleDeadCars();
+      this.updateChatter(dt);
       this.updatePrompt();
     }
 
@@ -393,8 +433,12 @@ export class SolmarGame {
     this.audio.update(dt);
     this.audio.setEngine(this.state === 'playing' && player.state === 'driving', player.speed);
 
-    // The sun and its shadow frustum follow the player.
-    this.sun.position.set(player.position.x + 70, 110, player.position.z + 40);
+    // The low golden sun and its shadow frustum follow the player.
+    this.sun.position.set(
+      player.position.x + GOLDEN_HOUR.sunOffset.x,
+      GOLDEN_HOUR.sunOffset.y,
+      player.position.z + GOLDEN_HOUR.sunOffset.z,
+    );
     this.sun.target.position.set(player.position.x, 0, player.position.z);
     this.sun.target.updateMatrixWorld();
 
@@ -404,11 +448,15 @@ export class SolmarGame {
     this.hud.setRep(this.reputation);
     this.hud.setHealth(player.health, PLAYER_TUNING.maxHealth);
     this.hud.setSpeed(player.state === 'driving' && player.car ? player.car.speedKmh() : 0, player.state === 'driving');
+    this.hud.setVehicle(player.state === 'driving' && player.car ? player.car.name : null, player.car ? player.car.health : 0);
+    this.hud.setDispatch(this.police.dispatchInfo(player.position), this.police.stars);
+    this.hud.setWeapons(this.combat.weaponState());
+    this.hud.setRadio(this.audio.radioOn ? this.audio.currentStation() : null);
     const target = this.missions.targetPlace();
     const dist = target ? Math.hypot(player.position.x - target.x, player.position.z - target.z) : null;
-    this.hud.setObjective(this.missions.objectiveText(), dist);
+    this.hud.setObjective(this.missions.objectiveText(), dist, this.missions.stageText());
     this.hud.setCrosshair(this.state === 'playing' && player.state === 'foot' && !this.vistaMode);
-    this.hud.setClock(12 * 60 + this.time / 4);
+    this.hud.setClock(GOLDEN_HOUR.clockStartMinutes + this.time / 4);
     this.hud.setLocation(this.locationName());
     this.hud.update(dt);
     this.minimap.draw(this); // drawn in the menu too, so it is never an empty disc
@@ -426,11 +474,11 @@ export class SolmarGame {
       this.renderer.render(this.scene, this.camera);
       if (firstFrame) {
         firstFrame = false;
-        window.__solmarReady = true;
+        window.__goldenTideReady = true;
       }
     };
     loop();
   }
 }
 
-new SolmarGame().start();
+new GoldenTideGame().start();

@@ -1,10 +1,11 @@
-// Combat: a hitscan pistol with tracers and muzzle flash, plus the punch.
-// Bullets test pedestrians and cars with the raycaster and buildings with a
-// hand-rolled ray-vs-AABB test, so shots stop at walls.
+// Combat: four weapon slots with magazines, reserves and reloads, plus the
+// punch. Bullets test pedestrians and cars with the raycaster and buildings
+// with a hand-rolled ray-vs-AABB test, so shots stop at walls. Keys 1-4
+// switch weapons, Q cycles, R reloads, the mouse wheel cycles too.
 import * as THREE from '../vendor/three.module.min.js';
-import { WANTED_TUNING } from './config.js';
+import { WANTED_TUNING, WEAPONS } from './config.js';
 
-const MAX_RANGE = 90;
+const MAX_RANGE = 120;
 
 // Slab test: ray vs an AABB that spans y 0..top. Returns distance or null.
 function rayHitBox(origin, dir, box, top) {
@@ -39,6 +40,52 @@ export class CombatSystem {
     this.raycaster.far = MAX_RANGE;
     this.cooldown = 0;
     this.center = new THREE.Vector2(0, 0);
+    this.weaponIndex = 0;
+    this.ammo = WEAPONS.map((w) => ({ mag: w.mag, reserve: w.reserve }));
+    this.reloading = 0; // seconds left, 0 when not reloading
+  }
+
+  currentWeapon() {
+    return WEAPONS[this.weaponIndex];
+  }
+
+  weaponState() {
+    return WEAPONS.map((w, i) => ({
+      name: w.name,
+      slot: w.slot,
+      mag: this.ammo[i].mag,
+      magSize: w.mag,
+      reserve: this.ammo[i].reserve,
+      active: i === this.weaponIndex,
+      reloading: i === this.weaponIndex && this.reloading > 0,
+    }));
+  }
+
+  selectWeapon(index, hud) {
+    if (index < 0 || index >= WEAPONS.length || index === this.weaponIndex) return;
+    this.weaponIndex = index;
+    this.reloading = 0;
+    this.cooldown = Math.max(this.cooldown, 0.15); // a beat to draw the gun
+    if (hud) hud.flashMessage(WEAPONS[index].name, 1.5);
+  }
+
+  cycleWeapon(dir, hud) {
+    this.selectWeapon((this.weaponIndex + dir + WEAPONS.length) % WEAPONS.length, hud);
+  }
+
+  reload(hud) {
+    const w = this.currentWeapon();
+    const a = this.ammo[this.weaponIndex];
+    if (this.reloading > 0 || a.mag >= w.mag || a.reserve <= 0) return;
+    this.reloading = w.reload;
+    if (hud) hud.flashMessage('Reloading…', 1.2);
+  }
+
+  refillAmmo() {
+    this.ammo.forEach((a, i) => {
+      a.reserve = Math.min(WEAPONS[i].reserve, a.reserve + Math.ceil(WEAPONS[i].reserve / 2));
+      a.mag = WEAPONS[i].mag;
+    });
   }
 
   muzzlePosition(player) {
@@ -50,16 +97,10 @@ export class CombatSystem {
     );
   }
 
-  shoot(world) {
-    if (this.cooldown > 0) return null;
-    const { player, peds, police, audio, hud } = world;
-    if (player.state !== 'foot') return null;
-    this.cooldown = 0.22;
-
-    this.raycaster.setFromCamera(this.center, this.camera);
-    const origin = this.raycaster.ray.origin;
-    const dir = this.raycaster.ray.direction;
-
+  _firePellet(world, origin, dir, damage) {
+    const { peds, police, audio, hud } = world;
+    this.raycaster.set(origin, dir);
+    this.raycaster.far = this.currentWeapon().range;
     // Mesh hits: pedestrians and cars.
     const targets = [];
     for (const p of peds.peds) if (p.state !== 'down') targets.push(p.mesh);
@@ -76,16 +117,9 @@ export class CombatSystem {
     let groundDist = Infinity;
     if (dir.y < -1e-4) groundDist = -origin.y / dir.y;
 
-    const muzzle = this.muzzlePosition(player);
-    this.effects.muzzleFlash(muzzle);
-    audio.gunshot();
-    police.addHeat(WANTED_TUNING.shoot, 'gunfire');
-    peds.scare(player.position.x, player.position.z, 26);
-
     const meshDist = meshHits.length ? meshHits[0].distance : Infinity;
-    const best = Math.min(meshDist, buildingDist, groundDist, MAX_RANGE);
+    const best = Math.min(meshDist, buildingDist, groundDist, this.currentWeapon().range);
     const hitPoint = origin.clone().addScaledVector(dir, best);
-    this.effects.tracer(muzzle, hitPoint);
 
     if (meshDist <= buildingDist && meshDist <= groundDist && meshHits.length) {
       const hitObject = meshHits[0].object;
@@ -94,7 +128,7 @@ export class CombatSystem {
       while (root.parent && root.parent !== this.scene && root.parent.type !== 'Scene') root = root.parent;
       const ped = peds.peds.find((p) => p.mesh === root);
       if (ped) {
-        peds.knockDown(ped, player.position.x, player.position.z);
+        peds.knockDown(ped, world.player.position.x, world.player.position.z);
         this.effects.burst(hitPoint, 0xcc2222, 10, 3, 0.5);
         police.addHeat(WANTED_TUNING.killPedestrian, 'ped down');
         hud.flashMessage('Pedestrian down — the cops are coming');
@@ -102,7 +136,7 @@ export class CombatSystem {
       }
       const car = world.allCars().find((c) => c.mesh === root);
       if (car) {
-        car.damage(30);
+        car.damage(damage);
         this.effects.burst(hitPoint, 0xffcc44, 12, 5, 0.5);
         if (car.dead && !car.exploded) {
           car.exploded = true;
@@ -115,6 +149,50 @@ export class CombatSystem {
     }
     this.effects.burst(hitPoint, 0xffe9a0, 8, 4, 0.4);
     return { type: 'world', point: hitPoint };
+  }
+
+  shoot(world) {
+    if (this.cooldown > 0 || this.reloading > 0) return null;
+    const { player, peds, police, audio, hud } = world;
+    if (player.state !== 'foot') return null;
+    const w = this.currentWeapon();
+    const a = this.ammo[this.weaponIndex];
+    if (a.mag <= 0) {
+      if (a.reserve > 0) this.reload(hud);
+      else hud.flashMessage(`${w.name} is dry — find an ammo crate`, 2);
+      return null;
+    }
+    a.mag -= 1;
+    this.cooldown = w.cooldown;
+
+    this.raycaster.setFromCamera(this.center, this.camera);
+    const origin = this.raycaster.ray.origin.clone();
+    const baseDir = this.raycaster.ray.direction.clone();
+
+    const muzzle = this.muzzlePosition(player);
+    this.effects.muzzleFlash(muzzle);
+    audio.gunshot(w.id);
+    police.addHeat(WANTED_TUNING.shoot, 'gunfire');
+    peds.scare(player.position.x, player.position.z, 26);
+
+    let result = null;
+    for (let p = 0; p < w.pellets; p++) {
+      const dir = baseDir.clone();
+      if (w.spread > 0) {
+        dir.x += (Math.random() - 0.5) * w.spread * 2;
+        dir.y += (Math.random() - 0.5) * w.spread * 2;
+        dir.z += (Math.random() - 0.5) * w.spread * 2;
+        dir.normalize();
+      }
+      const r = this._firePellet(world, origin, dir, w.damage);
+      if (p === 0) {
+        this.effects.tracer(muzzle, r.point);
+        result = r;
+      } else if (r.type !== 'world') {
+        result = r;
+      }
+    }
+    return result;
   }
 
   // Click on foot: punch when someone is in reach, otherwise fire.
@@ -133,5 +211,16 @@ export class CombatSystem {
 
   update(dt) {
     this.cooldown = Math.max(0, this.cooldown - dt);
+    if (this.reloading > 0) {
+      this.reloading -= dt;
+      if (this.reloading <= 0) {
+        const w = this.currentWeapon();
+        const a = this.ammo[this.weaponIndex];
+        const needed = w.mag - a.mag;
+        const taken = Math.min(needed, a.reserve);
+        a.mag += taken;
+        a.reserve -= taken;
+      }
+    }
   }
 }

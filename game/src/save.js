@@ -4,7 +4,7 @@
 import { SAVE_KEY, ECONOMY } from './config.js';
 
 export function defaultSave() {
-  return { cash: ECONOMY.startCash, reputation: 0, missionIndex: 0, savedAt: Date.now() };
+  return { cash: ECONOMY.startCash, reputation: 0, missionIndex: 0, weapon: 0, savedAt: Date.now() };
 }
 
 export function loadSave() {
@@ -16,7 +16,8 @@ export function loadSave() {
     return {
       cash: data.cash,
       reputation: typeof data.reputation === 'number' ? data.reputation : 0,
-      missionIndex: Math.max(0, Math.min(3, Math.floor(data.missionIndex))),
+      missionIndex: Math.max(0, Math.min(9, Math.floor(data.missionIndex))),
+      weapon: typeof data.weapon === 'number' ? Math.max(0, Math.min(3, Math.floor(data.weapon))) : 0,
       savedAt: data.savedAt || 0,
     };
   } catch (e) {

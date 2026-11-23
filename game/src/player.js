@@ -1,7 +1,8 @@
 // The player, Mara Voss: on-foot movement with a walk cycle, entering and
-// leaving cars, health, and a punch for close trouble.
+// leaving cars, health, and a punch for close trouble. Aurelia General
+// patches her up when she walks past it.
 import * as THREE from '../vendor/three.module.min.js';
-import { PLAYER_TUNING } from './config.js';
+import { PLAYER_TUNING, PLACES } from './config.js';
 import { collideCircle } from './city.js';
 import { buildHumanoid, animateWalk } from './pedestrians.js';
 
@@ -88,6 +89,10 @@ export class PlayerController {
     const b = city.bounds;
     this.mesh.position.x = Math.max(b.min, Math.min(b.waterX - 3, this.mesh.position.x));
     this.mesh.position.z = Math.max(b.min, Math.min(b.max, this.mesh.position.z));
+    // Aurelia General heals on foot, slowly, when Mara walks past it.
+    if (Math.hypot(this.mesh.position.x - PLACES.hospital.x, this.mesh.position.z - PLACES.hospital.z) < 14) {
+      this.heal(6 * dt);
+    }
     return 0;
   }
 

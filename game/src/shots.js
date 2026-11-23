@@ -1,37 +1,45 @@
 // Screenshot staging: ?shot=<scene> puts the game into a composed moment
-// so the dossier's screenshots show the systems at their best — a police
-// chase, on-foot street life, a mission delivery, a city vista. Normal play
+// so the dossier's screenshots show the systems at their best — a golden-hour
+// police chase under the helicopter, on-foot street life with dialogue, a
+// mission delivery past a roadblock, a sunset city vista. Normal play
 // ignores these parameters entirely.
 import { createCarMesh, ArcadeCar } from './vehicles.js';
 
 function stageChase(world) {
   world.beginPlay(false);
   // Mara in a red sports car, flying north up the beach avenue — the camera
-  // looks back at her, so the cruisers on her tail fill the frame.
+  // looks back at her, so the cruisers on her tail fill the frame, HAWK-1
+  // overhead with its spotlight cone on the car.
   const car = new ArcadeCar(createCarMesh('sports', 0xc0392b), {
-    x: -25.5, z: 60, heading: Math.PI, maxSpeed: 42,
+    x: -25.5, z: 60, heading: Math.PI, maxSpeed: 42, name: 'Comet GT',
   });
   car.speed = 30;
   world.scene.add(car.mesh);
   world.extraCars.push(car);
   world.player.enterCar(car);
-  // Three stars and three cruisers on her tail, plus traffic behind them.
+  // Three stars and three cruisers on her tail, close enough to fill the
+  // frame, plus traffic behind them.
   world.police.setWanted(3);
-  const spots = [[-29, 84], [-25.5, 96], [-32.5, 108]];
+  const spots = [[-29, 74], [-25.5, 84], [-32.5, 94]];
   for (const [x, z] of spots) {
     const cop = world.police.spawnAt(x, z, Math.PI);
     cop.speed = 30;
   }
+  // HAWK-1 placed low and in frame: above the road ahead, so the reverse
+  // camera catches the helicopter and its spotlight cone.
+  world.police.ensureHeli(world.player.position);
+  world.police.heli.mesh.position.set(-25.5, 24, 115);
   world.traffic.spawnAt(-29, 132, 'z', -1);
   world.traffic.spawnAt(-29, 152, 'z', -1);
-  // Mission 3, final stage: the safehouse beacon waits ahead.
-  world.missions.index = 2;
+  // Mission 4, final stage: the safehouse beacon waits ahead.
+  world.missions.index = 3;
   world.missions.startMission(world);
   world.missions.stageIdx = 1;
   world.missions._placeBeacon();
   world.missions._runStageStart(world);
   world.hud.hideMissionCard();
   world.hud.flashMessage('Three stars — the whole PD is on you. RUN.', 6);
+  world.hud.showDialogue('Mara', 'Three stars and a helicopter. Time to disappear.', 8);
   world.chaseCam.reverse = true;
   world.chaseCam.snapBehind(car.position, car.heading + Math.PI);
 }
@@ -47,8 +55,11 @@ function stageFoot(world) {
     p.mesh.position.set(near[i][0], 0, near[i][1]);
     p.target = { x: near[i][0] + 20, z: near[i][1] + 10 };
   });
+  // On foot with the SMG out: the weapon bar shows all four slots.
+  world.combat.selectWeapon(1);
   world.chaseCam.snapBehind(world.player.mesh.position, world.player.heading);
-  world.hud.flashMessage('Solmar Bay — on foot, anything can happen', 6);
+  world.hud.flashMessage('Santa Aurelia — on foot, anything can happen', 6);
+  world.hud.showDialogue('Taxi driver', 'I have seen three chases today. Three!', 8);
 }
 
 function stageMission(world) {
@@ -71,23 +82,24 @@ function stageMission(world) {
   const cop2 = world.police.spawnAt(-25.5, 8, Math.PI);
   cop1.speed = 24;
   cop2.speed = 24;
-  // Roadblock ahead: a parked cruiser across the road.
-  const block = new ArcadeCar(createCarMesh('police', 0xf2f2f2), { x: -29, z: -160, heading: Math.PI / 2 });
-  world.scene.add(block.mesh);
-  world.extraCars.push(block);
+  // Roadblock ahead: two cruisers across the road.
+  world.police.spawnRoadblockAt(-29, -160, Math.PI);
   world.traffic.spawnAt(-29, 42, 'z', -1);
   world.hud.flashMessage("Deliver the Comet to Rosa's garage", 6);
+  world.hud.showDialogue('Rosa', 'Bring her in the back way. Cops watch the front.', 8);
   world.chaseCam.snapBehind(comet.position, comet.heading);
 }
 
 function stageVista(world) {
   world.beginPlay(false);
-  // Mara on foot on the beach avenue; the camera orbits the whole city.
+  // Mara on foot on the beach avenue at sunset; the camera orbits the city
+  // with HAWK-1 patrolling the skyline in the distance.
   world.player.mesh.position.set(210, 0, 16);
   world.player.heading = -Math.PI / 2;
   world.player.mesh.rotation.y = world.player.heading;
   world.vistaMode = true;
-  world.hud.flashMessage('Solmar Bay — sun, sea, and somewhere to be', 8);
+  world.police.ensureHeli({ x: 120, z: -40 });
+  world.hud.flashMessage('Santa Aurelia — sun, sea, and somewhere to be', 8);
 }
 
 export function stageScreenshot(world, params) {
@@ -99,7 +111,7 @@ export function stageScreenshot(world, params) {
   else if (shot === 'vista') stageVista(world);
   else if (shot === 'start') return false; // the menu is the shot
   else return false;
-  world.hud.setObjective(world.missions.objectiveText(), null);
+  world.hud.setObjective(world.missions.objectiveText(), null, world.missions.stageText());
   window.__shotReady = true;
   return true;
 }

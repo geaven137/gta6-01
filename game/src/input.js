@@ -8,6 +8,7 @@ export class Input {
     this.mouseDY = 0;
     this.mouseDown = false;
     this.clicks = []; // { button } consumed by combat each frame
+    this.wheelDelta = 0; // mouse wheel: consumed by weapon cycling
     this.dragging = false;
     this.lastX = 0;
     this.lastY = 0;
@@ -42,6 +43,10 @@ export class Input {
       this.mouseDown = false;
       this.dragging = false;
     });
+    target.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      this.wheelDelta += e.deltaY > 0 ? 1 : -1;
+    }, { passive: false });
     target.addEventListener('contextmenu', (e) => e.preventDefault());
   }
 
@@ -77,6 +82,12 @@ export class Input {
   consumeClicks() {
     const out = this.clicks;
     this.clicks = [];
+    return out;
+  }
+
+  consumeWheel() {
+    const out = this.wheelDelta;
+    this.wheelDelta = 0;
     return out;
   }
 
