@@ -1,11 +1,13 @@
-// Solmar Heat — a gta6-01 entry (Node 22, standard library only): an original open-world
+// Golden Tide — a gta6-01 entry (Node 22, standard library only): an original open-world
 // crime game in this directory's game/ folder, plain static files a desktop browser loads
 // offline (game/index.html and its ES modules, three.js vendored as a minified build under
 // game/vendor/, no network request). The program hands it in: it copies game/ and screenshots/
 // from beside this file to /output and writes /output/dossier.json, the summary the judge
-// reads, with the vendored make.fun library. The game itself: a procedural sun-soaked city to
-// explore on foot and by car, traffic and pedestrians, a wanted level with police who chase,
-// three story missions, combat, a DOM HUD with a minimap, and a save that survives a closed tab.
+// reads, with the vendored make.fun library. The game itself: a procedural golden-hour city
+// to explore on foot and by car, traffic and pedestrians, a wanted level with police cruisers,
+// the HAWK-1 helicopter and roadblocks, an SAPD dispatch panel, four weapons, a three-station
+// radio, nine story missions with dialogue, a DOM HUD with a minimap, and a save that survives
+// a closed tab.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
