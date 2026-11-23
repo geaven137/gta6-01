@@ -1,4 +1,4 @@
-// Golden Tide — a gta6-01 entry (Node 22, standard library only): an original open-world
+// Golden Tide V3 — a gta6-01 entry (Node 22, standard library only): an original open-world
 // crime game in this directory's game/ folder, plain static files a desktop browser loads
 // offline (game/index.html and its ES modules, three.js vendored as a minified build under
 // game/vendor/, no network request). The program hands it in: it copies game/ and screenshots/
@@ -7,7 +7,10 @@
 // to explore on foot and by car, traffic and pedestrians, a wanted level with police cruisers,
 // the HAWK-1 helicopter and roadblocks, an SAPD dispatch panel, four weapons, a three-station
 // radio, nine story missions with dialogue, a DOM HUD with a minimap, and a save that survives
-// a closed tab.
+// a closed tab. V3 adds five systems: a recruitable crew (driver, hacker, gunman) whose
+// abilities change missions; six districts with standing meters that bend shop prices and
+// police heat; street races against two rival drivers; Rosa's garage shop (buy, upgrade,
+// respray, roll out); and a respect ladder whose ranks unlock weapons, cars, crew and races.
 //
 // Serve it locally with `node serve.ts`, then open http://localhost:8080.
 // Outside the grader's container, MAKEFUN_OUTPUT_DIR stands in for /output:
