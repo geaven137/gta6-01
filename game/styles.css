@@ -1,4 +1,4 @@
-/* Solmar Heat — DOM HUD and menus. System font stack only: no webfonts, so
+/* Golden Tide — DOM HUD and menus. System font stack only: no webfonts, so
    the game loads nothing over the network. */
 html, body {
   margin: 0;
@@ -15,6 +15,9 @@ html, body {
 #top-left { position: absolute; top: 16px; left: 18px; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
 #location { font-size: 22px; font-weight: 800; letter-spacing: .04em; }
 #clock { font-size: 15px; opacity: .85; margin-top: 2px; }
+#radio { margin-top: 10px; background: rgba(8,16,24,.55); border: 1px solid rgba(255,255,255,.22); border-radius: 8px; padding: 7px 12px; max-width: 240px; }
+#radio-station { font-size: 14px; font-weight: 800; color: #ffd23c; letter-spacing: .04em; }
+#radio-track { font-size: 12px; opacity: .9; margin-top: 1px; font-style: italic; }
 
 #top-right { position: absolute; top: 14px; right: 18px; text-align: right; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
 #wanted-stars { font-size: 26px; letter-spacing: 2px; line-height: 1; }
@@ -23,25 +26,46 @@ html, body {
 #wanted-stars.hot .star.lit { color: #ff5a3c; text-shadow: 0 0 12px rgba(255,90,60,.9); animation: pulse .7s infinite alternate; }
 @keyframes pulse { from { opacity: 1; } to { opacity: .55; } }
 #cash { font-size: 26px; font-weight: 800; color: #7dff9e; margin-top: 4px; }
-#rep { font-size: 13px; font-weight: 700; letter-spacing: .12em; opacity: .9; margin-top: 1px; }
+#rep { font-size: 12px; font-weight: 700; letter-spacing: .1em; opacity: .9; margin-top: 1px; }
+#rank-bar { width: 150px; height: 5px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.3); border-radius: 3px; margin-top: 4px; margin-left: auto; overflow: hidden; }
+#rank-fill { height: 100%; width: 0; background: linear-gradient(90deg, #ffd23c, #ff9a3c); transition: width .3s; }
 #health-bar { width: 150px; height: 9px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.35); border-radius: 5px; margin-top: 7px; margin-left: auto; overflow: hidden; }
 #health-fill { height: 100%; width: 100%; background: linear-gradient(90deg, #2ecc71, #7dff9e); transition: width .25s; }
 #health-fill.low { background: linear-gradient(90deg, #e74c3c, #ff7b6b); }
+
+#dispatch { display: none; margin-top: 10px; background: rgba(8,16,24,.62); border: 1px solid rgba(255,90,60,.55); border-radius: 8px; padding: 8px 12px; text-align: left; min-width: 210px; }
+.dispatch-title { font-size: 12px; font-weight: 900; letter-spacing: .14em; color: #ff8a70; margin-bottom: 5px; }
+.dispatch-row { display: flex; gap: 8px; font-size: 13px; font-weight: 700; line-height: 1.55; }
+.dispatch-call { color: #fff; min-width: 64px; }
+.dispatch-role { color: #ffd23c; flex: 1; }
+.dispatch-dist { color: #cfd8de; }
 
 #minimap-wrap { position: absolute; left: 18px; bottom: 18px; width: 180px; height: 180px; border-radius: 50%; border: 3px solid rgba(255,255,255,.75); box-shadow: 0 4px 18px rgba(0,0,0,.5); overflow: hidden; background: #16222c; }
 #minimap { width: 180px; height: 180px; display: block; }
 
 #objective-wrap { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); text-align: center; text-shadow: 0 2px 8px rgba(0,0,0,.85); max-width: 70vw; }
+#objective-stage { font-size: 12px; font-weight: 800; letter-spacing: .14em; color: #ffd23c; margin-bottom: 3px; }
 #objective { font-size: 19px; font-weight: 700; }
 #objective-dist { font-size: 15px; font-weight: 700; color: #ffd23c; margin-top: 2px; }
+#dialogue { position: absolute; left: 50%; bottom: 132px; transform: translateX(-50%); display: none; max-width: 560px; background: rgba(8,16,24,.72); border: 1px solid rgba(255,255,255,.28); border-left: 4px solid #ffd23c; border-radius: 8px; padding: 10px 18px; text-align: left; }
+#dialogue.show { display: block; animation: cardin .3s ease-out; }
+#dialogue-name { font-size: 13px; font-weight: 900; letter-spacing: .1em; color: #ffd23c; margin-bottom: 2px; }
+#dialogue-text { font-size: 16px; line-height: 1.4; color: #eef3f6; }
 #prompt { position: absolute; left: 18px; bottom: 220px; display: none; background: rgba(0,0,0,.65); border: 1px solid rgba(255,255,255,.3); border-radius: 6px; padding: 8px 16px; font-size: 16px; font-weight: 700; }
 #flash { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); display: none; font-size: 21px; font-weight: 800; text-align: center; text-shadow: 0 2px 10px rgba(0,0,0,.9); max-width: 80vw; }
 #flash.show { display: block; animation: flashin .3s ease-out; }
 @keyframes flashin { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; } }
 
-#speed-wrap { position: absolute; right: 22px; bottom: 20px; display: none; text-align: right; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
+#weapons { position: absolute; right: 22px; bottom: 124px; display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.weapon-slot { display: flex; gap: 8px; align-items: baseline; background: rgba(8,16,24,.55); border: 1px solid rgba(255,255,255,.22); border-radius: 6px; padding: 4px 10px; font-size: 13px; font-weight: 700; opacity: .75; }
+.weapon-slot.active { border-color: #ffd23c; opacity: 1; box-shadow: 0 0 10px rgba(255,210,60,.35); }
+.weapon-key { color: #ffd23c; font-size: 11px; font-weight: 900; }
+.weapon-name { min-width: 92px; }
+.weapon-ammo { color: #cfd8de; font-variant-numeric: tabular-nums; }
+#speed-wrap { position: absolute; right: 22px; bottom: 26px; display: none; text-align: right; text-shadow: 0 2px 8px rgba(0,0,0,.8); }
 #speed { font-size: 44px; font-weight: 900; line-height: 1; }
 #speed-wrap .unit { font-size: 14px; font-weight: 700; margin-left: 6px; opacity: .85; }
+#vehicle { font-size: 13px; font-weight: 700; color: #ffd23c; margin-top: 3px; }
 
 #crosshair { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); display: none; font-size: 26px; font-weight: 300; color: rgba(255,255,255,.9); text-shadow: 0 0 6px rgba(0,0,0,.9); }
 
