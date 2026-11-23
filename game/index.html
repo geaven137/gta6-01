@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Solmar Heat — Open-World Crime Game</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="app"></div>
+
+<div id="hud">
+  <div id="top-left">
+    <div id="location">Solmar Bay</div>
+    <div id="clock">12:00</div>
+  </div>
+  <div id="top-right">
+    <div id="wanted-stars"><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span></div>
+    <div id="cash">$120</div>
+    <div id="rep">REP 0</div>
+    <div id="health-bar"><div id="health-fill"></div></div>
+  </div>
+  <div id="minimap-wrap"><canvas id="minimap" width="180" height="180"></canvas></div>
+  <div id="objective-wrap">
+    <div id="objective"></div>
+    <div id="objective-dist"></div>
+  </div>
+  <div id="prompt"></div>
+  <div id="flash"></div>
+  <div id="speed-wrap"><span id="speed">0</span><span class="unit">km/h</span></div>
+  <div id="crosshair">+</div>
+  <div id="mission-card">
+    <h2 id="mission-card-title"></h2>
+    <p id="mission-card-text"></p>
+  </div>
+  <div id="busted-warning">
+    <div class="busted-label">STAND STILL AND YOU'RE BUSTED</div>
+    <div id="busted-bar"><div id="busted-fill"></div></div>
+  </div>
+  <div id="vignette"></div>
+  <div id="float-layer"></div>
+</div>
+
+<div id="menu" class="overlay">
+  <div class="menu-panel">
+    <h1>SOLMAR <span>HEAT</span></h1>
+    <p class="tagline">Sun. Sea. Somewhere to be — fast.</p>
+    <p class="story">Mara Voss owes Delgado, and Delgado always collects. Three jobs stand
+    between her and freedom in Solmar Bay: a fare, a heist, and one last getaway.</p>
+    <button id="btn-continue" class="menu-btn primary">Continue</button>
+    <button id="btn-start" class="menu-btn primary">New Game</button>
+    <div class="controls">
+      <div><b>W A S D</b> move / drive</div>
+      <div><b>Mouse drag</b> look around</div>
+      <div><b>E</b> get in / out of a car</div>
+      <div><b>Click</b> punch / shoot</div>
+      <div><b>Shift</b> run &nbsp; <b>Space</b> handbrake</div>
+      <div><b>Esc</b> pause &nbsp; <b>M</b> sound</div>
+    </div>
+    <p class="disclaimer">An original game by its maker. Not affiliated with Rockstar Games
+    or Grand Theft Auto. All names, characters and places are fictional.</p>
+  </div>
+</div>
+
+<div id="pause-menu" class="overlay">
+  <div class="menu-panel small">
+    <h2>PAUSED</h2>
+    <button id="btn-resume" class="menu-btn">Resume</button>
+    <button id="btn-restart-mission" class="menu-btn">Restart mission</button>
+    <button id="btn-save" class="menu-btn">Save progress</button>
+    <button id="btn-quit" class="menu-btn">Quit to menu</button>
+  </div>
+</div>
+
+<div id="mission-complete" class="overlay">
+  <div class="menu-panel small">
+    <h2 id="complete-title">MISSION PASSED</h2>
+    <p id="complete-line" class="story"></p>
+    <p id="complete-reward" class="reward">+$250</p>
+    <p id="complete-next" class="story"></p>
+    <button id="btn-complete-continue" class="menu-btn primary">Continue</button>
+  </div>
+</div>
+
+<div id="end-screen" class="overlay">
+  <div class="menu-panel small">
+    <h2 id="end-title">BUSTED</h2>
+    <p id="end-text" class="story"></p>
+    <button id="btn-respawn" class="menu-btn primary">Back on the street</button>
+  </div>
+</div>
+
+<div id="error"></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
