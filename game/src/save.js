@@ -4,7 +4,11 @@
 import { SAVE_KEY, ECONOMY } from './config.js';
 
 export function defaultSave() {
-  return { cash: ECONOMY.startCash, reputation: 0, missionIndex: 0, weapon: 0, savedAt: Date.now() };
+  return {
+    cash: ECONOMY.startCash, reputation: 0, missionIndex: 0, weapon: 0,
+    crew: [], districts: {}, garage: { owned: [], upgrades: {}, activeId: null },
+    races: { won: [], bestTimes: {} }, savedAt: Date.now(),
+  };
 }
 
 export function loadSave() {
@@ -18,6 +22,10 @@ export function loadSave() {
       reputation: typeof data.reputation === 'number' ? data.reputation : 0,
       missionIndex: Math.max(0, Math.min(9, Math.floor(data.missionIndex))),
       weapon: typeof data.weapon === 'number' ? Math.max(0, Math.min(3, Math.floor(data.weapon))) : 0,
+      crew: Array.isArray(data.crew) ? data.crew : [],
+      districts: data.districts && typeof data.districts === 'object' ? data.districts : {},
+      garage: data.garage && typeof data.garage === 'object' ? data.garage : { owned: [], upgrades: {}, activeId: null },
+      races: data.races && typeof data.races === 'object' ? data.races : { won: [], bestTimes: {} },
       savedAt: data.savedAt || 0,
     };
   } catch (e) {

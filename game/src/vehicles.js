@@ -94,7 +94,7 @@ export function createCarMesh(type, color) {
     if (front) steerGroups.push(steer);
   }
 
-  group.userData = { steerGroups, spinGroups, lightBar, type, length: spec.l };
+  group.userData = { steerGroups, spinGroups, lightBar, type, length: spec.l, paintMat: paint };
   return group;
 }
 

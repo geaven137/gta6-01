@@ -101,8 +101,10 @@ export class WantedSystem {
 
   addHeat(amount, reason) {
     if (amount <= 0) return this.stars;
+    // District standing: where the neighbourhood is loyal, heat builds slower.
+    const scaled = amount * (this.heatFactor ?? 1);
     const before = this.stars;
-    this.heat = Math.min(100, this.heat + amount);
+    this.heat = Math.min(100, this.heat + scaled);
     this.stars = this.starsForHeat(this.heat);
     this.hiddenTimer = 0;
     this.lostThemAnnounced = false;

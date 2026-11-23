@@ -43,6 +43,8 @@ export class CombatSystem {
     this.weaponIndex = 0;
     this.ammo = WEAPONS.map((w) => ({ mag: w.mag, reserve: w.reserve }));
     this.reloading = 0; // seconds left, 0 when not reloading
+    this.damageMul = 1; // Rook's crew bonus, set by the game each frame
+    this.canUse = null; // (index) => bool, set by the game (respect locks)
   }
 
   currentWeapon() {
@@ -58,11 +60,16 @@ export class CombatSystem {
       reserve: this.ammo[i].reserve,
       active: i === this.weaponIndex,
       reloading: i === this.weaponIndex && this.reloading > 0,
+      locked: this.canUse ? !this.canUse(i) : false,
     }));
   }
 
   selectWeapon(index, hud) {
     if (index < 0 || index >= WEAPONS.length || index === this.weaponIndex) return;
+    if (this.canUse && !this.canUse(index)) {
+      if (hud) hud.flashMessage(`${WEAPONS[index].name} is locked — earn more respect.`, 2.5);
+      return;
+    }
     this.weaponIndex = index;
     this.reloading = 0;
     this.cooldown = Math.max(this.cooldown, 0.15); // a beat to draw the gun
@@ -70,7 +77,14 @@ export class CombatSystem {
   }
 
   cycleWeapon(dir, hud) {
-    this.selectWeapon((this.weaponIndex + dir + WEAPONS.length) % WEAPONS.length, hud);
+    // Skip locked slots when cycling.
+    for (let step = 1; step <= WEAPONS.length; step++) {
+      const next = (this.weaponIndex + dir * step + WEAPONS.length * 2) % WEAPONS.length;
+      if (!this.canUse || this.canUse(next)) {
+        this.selectWeapon(next, hud);
+        return;
+      }
+    }
   }
 
   reload(hud) {
@@ -184,7 +198,7 @@ export class CombatSystem {
         dir.z += (Math.random() - 0.5) * w.spread * 2;
         dir.normalize();
       }
-      const r = this._firePellet(world, origin, dir, w.damage);
+      const r = this._firePellet(world, origin, dir, w.damage * this.damageMul);
       if (p === 0) {
         this.effects.tracer(muzzle, r.point);
         result = r;

@@ -4,6 +4,12 @@
 // golden hour: a low amber sun in the west, 17:41 on the clock.
 import * as THREE from '../vendor/three.module.min.js';
 import { PLACES, PLAYER_TUNING, ECONOMY, WANTED_TUNING, PALETTE, GOLDEN_HOUR } from './config.js';
+import { rankIndex } from './respect.js';
+import { DistrictManager } from './districts.js';
+import { RespectManager } from './respect.js';
+import { CrewManager, CREW_DEFS } from './crew.js';
+import { GarageManager } from './garage.js';
+import { RaceManager } from './races.js';
 import { createRng } from './random.js';
 import { buildCity } from './city.js';
 import { Input } from './input.js';
@@ -84,6 +90,20 @@ export class GoldenTideGame {
     this.pickups = new CashPickupField(this.scene, this.city, this.rng, 12);
     this.ammoPickups = new AmmoPickupField(this.scene, this.city, this.rng, 4);
     this.combat = new CombatSystem(this.scene, this.camera, this.effects);
+    // V3 systems: districts, respect, crew, garage, races.
+    this.districts = new DistrictManager();
+    this.respect = new RespectManager();
+    this.crew = new CrewManager();
+    this.garage = new GarageManager(this.scene);
+    this.races = new RaceManager(this.scene);
+    this._lastRep = 0;
+    if (this.save) {
+      this.crew.load(this.save.crew);
+      this.districts.load(this.save.districts);
+      this.garage.load(this.save.garage);
+      this.races.load(this.save.races);
+    }
+    this.combat.canUse = (i) => this.respect.canUseWeapon(i, this.reputation);
     this.chaseCam = new ChaseCamera(this.camera);
     this.minimap = new Minimap(document.getElementById('minimap'), this.city);
     this.hud = new Hud({
@@ -94,6 +114,8 @@ export class GoldenTideGame {
       onQuit: () => { this.saveGame(); this.state = 'menu'; this.hud.hidePause(); this.hud.showMenu(!!loadSave()); },
       onRespawn: () => this.respawnAfterEnd(),
       onMissionContinue: () => { this.hud.hideMissionComplete(); this.state = 'playing'; },
+      onGarageClose: () => this.closeShop(),
+      onCrewClose: () => this.closeShop(),
     });
 
     this.hud.showMenu(!!this.save);
@@ -112,11 +134,15 @@ export class GoldenTideGame {
   }
 
   allCars() {
-    return [...this.traffic.allCars(), ...this.police.cars(), ...this.police.roadblockCars(), ...this.missions.missionCars(), ...this.extraCars];
+    return [...this.traffic.allCars(), ...this.police.cars(), ...this.police.roadblockCars(), ...this.missions.missionCars(), ...this.races.rivalCars(), ...this.extraCars];
   }
 
   saveGame() {
-    storeSave({ cash: this.cash, reputation: this.reputation, missionIndex: this.missions.index, weapon: this.combat.weaponIndex });
+    storeSave({
+      cash: this.cash, reputation: this.reputation, missionIndex: this.missions.index, weapon: this.combat.weaponIndex,
+      crew: this.crew.serialize(), districts: this.districts.serialize(),
+      garage: this.garage.serialize(), races: this.races.serialize(),
+    });
   }
 
   beginPlay(useSave) {
@@ -125,12 +151,28 @@ export class GoldenTideGame {
       this.reputation = this.save.reputation;
       this.missions.index = this.save.missionIndex;
       if (typeof this.save.weapon === 'number') this.combat.selectWeapon(this.save.weapon);
+      this.crew.load(this.save.crew);
+      this.districts.load(this.save.districts);
+      this.garage.load(this.save.garage);
+      this.races.load(this.save.races);
     } else {
       const fresh = defaultSave();
       this.cash = fresh.cash;
       this.reputation = fresh.reputation;
       this.missions.index = 0;
+      this.crew.recruited.clear();
+      this.districts = new DistrictManager();
+      this.races.won.clear();
+      this.races.bestTimes = {};
+      if (this.garage.activeCar) {
+        if (this.player.car === this.garage.activeCar) this.player.exitCar();
+        this.scene.remove(this.garage.activeCar.mesh);
+        const i = this.extraCars.indexOf(this.garage.activeCar);
+        if (i >= 0) this.extraCars.splice(i, 1);
+      }
+      this.garage = new GarageManager(this.scene);
     }
+    this._lastRep = this.reputation;
     this.audio.unlock();
     this.state = 'playing';
     this.hud.hideMenu();
@@ -205,12 +247,68 @@ export class GoldenTideGame {
 
   locationName() {
     const p = this.player.position;
-    if (p.x > 205) return 'South Beach';
-    if (Math.hypot(p.x - PLACES.docks.x, p.z - PLACES.docks.z) < 45) return 'South Docks';
-    if (Math.hypot(p.x, p.z) < 70) return 'Downtown Aurelia';
-    if (p.x < -140 && p.z < -100) return 'Northside';
-    if (p.x < -140) return 'West End';
-    return 'Santa Aurelia';
+    return this.districts.current(p.x, p.z).name;
+  }
+
+  // --- Shop panels (garage + crew): the game pauses while one is open. ---
+  openGarage() {
+    if (this.state !== 'playing') return;
+    this.state = 'shop';
+    this._renderGarage();
+  }
+
+  _renderGarage() {
+    const rankIdx = rankIndex(this.reputation);
+    this.hud.showGarage({
+      cash: this.cash,
+      cars: this.garage.panelData(this).map((c) => ({
+        ...c,
+        rankOk: rankIdx >= c.minRank,
+        lockReason: rankIdx >= c.minRank ? '' : this.respect.lockReasonForRank(c.minRank),
+      })),
+      upgradePrices: {
+        engine: this.garage.upgradePrice('engine', this),
+        armor: this.garage.upgradePrice('armor', this),
+        paint: this.garage.paintPrice(this),
+      },
+    }, (action, id) => this._garageAction(action, id));
+  }
+
+  _garageAction(action, id) {
+    if (action === 'buy') this.garage.buy(id, this);
+    else if (action === 'select') this.garage.select(id, this);
+    else if (action === 'engine') this.garage.upgrade(id, 'engine', this);
+    else if (action === 'armor') this.garage.upgrade(id, 'armor', this);
+    else if (action === 'paint') this.garage.paint(id, this.garage.nextPaintColor(id), this);
+    this._renderGarage();
+  }
+
+  openCrew() {
+    if (this.state !== 'playing') return;
+    this.state = 'shop';
+    this._renderCrew();
+  }
+
+  _renderCrew() {
+    const rankIdx = rankIndex(this.reputation);
+    this.hud.showCrew({
+      cash: this.cash,
+      members: CREW_DEFS.map((d) => ({
+        ...d,
+        recruited: this.crew.has(d.id),
+        rankOk: rankIdx >= d.minRank,
+        lockReason: rankIdx >= d.minRank ? '' : this.respect.lockReasonForRank(d.minRank),
+      })),
+    }, (action, id) => {
+      if (action === 'recruit') this.crew.recruit(id, this);
+      this._renderCrew();
+    });
+  }
+
+  closeShop() {
+    this.hud.hideGarage();
+    this.hud.hideCrew();
+    if (this.state === 'shop') this.state = 'playing';
   }
 
   handleCarEntry() {
@@ -223,6 +321,13 @@ export class GoldenTideGame {
     const nearMarker = !missions.active && missions.remaining() > 0 &&
       Math.hypot(player.position.x - PLACES.delgadoOffice.x, player.position.z - PLACES.delgadoOffice.z) < 7;
     if (nearMarker) return;
+    // Rosa's garage owns E when the player stands at the forecourt on foot.
+    const nearGarage = player.state === 'foot' &&
+      Math.hypot(player.position.x - PLACES.chopGarage.x, player.position.z - PLACES.chopGarage.z) < 8;
+    if (nearGarage) {
+      this.openGarage();
+      return;
+    }
     const car = findNearestCar(this.allCars(), player.position.x, player.position.z, PLAYER_TUNING.enterCarRange);
     if (!car || car.dead) return;
     player.enterCar(car);
@@ -339,6 +444,21 @@ export class GoldenTideGame {
   updatePrompt() {
     if (this.hud.el.prompt.textContent !== '') return; // a system already spoke
     const { player } = this;
+    // Rosa's garage prompt, then the Bowl race prompt, then car entry.
+    if (player.state === 'foot') {
+      const dGarage = Math.hypot(player.position.x - PLACES.chopGarage.x, player.position.z - PLACES.chopGarage.z);
+      if (dGarage < 8) {
+        this.hud.setPrompt("[E] Rosa's garage");
+        return;
+      }
+    }
+    if (this.races.nearStart(this) && !this.races.active) {
+      const race = this.races.nextRace(rankIndex(this.reputation));
+      if (race) {
+        this.hud.setPrompt(player.state === 'driving' ? `[T] Start race: ${race.name}` : 'Get in a car to race at the Bowl');
+        return;
+      }
+    }
     if (player.state === 'driving') {
       this.hud.setPrompt('[E] Leave car');
       return;
@@ -371,8 +491,22 @@ export class GoldenTideGame {
       const st = this.audio.nextStation();
       this.hud.flashMessage(`${st.name} — ${st.track}`, 3);
     }
+    if (input.pressed('KeyC') && this.state === 'playing') this.openCrew();
+    if (input.pressed('KeyT') && this.state === 'playing' && this.races.nearStart(this) && !this.races.active) {
+      if (player.state !== 'driving') {
+        this.hud.flashMessage('Get in a car to race.', 2.5);
+      } else if (this.missions.active) {
+        this.hud.flashMessage('Finish the mission first — one job at a time.', 3);
+      } else {
+        const race = this.races.nextRace(rankIndex(this.reputation));
+        if (!race) this.hud.flashMessage('No races unlocked yet — earn respect first.', 3);
+        else this.races.startRace(race, this);
+      }
+    }
     if (input.pressed('Escape')) {
-      if (this.state === 'playing') {
+      if (this.state === 'shop') {
+        this.closeShop();
+      } else if (this.state === 'playing') {
         this.state = 'paused';
         this.hud.showPause();
       } else if (this.state === 'paused') {
@@ -416,6 +550,7 @@ export class GoldenTideGame {
       this.pickups.update(dt, this);
       this.ammoPickups.update(dt, this);
       this.missions.update(dt, this);
+      this.races.update(dt, this);
       this.combat.update(dt);
       this.handleCarPedCollisions();
       this.handleCarCarCollisions();
@@ -442,10 +577,33 @@ export class GoldenTideGame {
     this.sun.target.position.set(player.position.x, 0, player.position.z);
     this.sun.target.updateMatrixWorld();
 
+    // District standing bends the heat; Rook bends the damage.
+    this.police.heatFactor = this.districts.heatFactorAt(player.position.x, player.position.z);
+    this.combat.damageMul = this.crew.damageMul;
+
     // HUD, every frame.
     this.hud.setStars(this.police.stars);
     this.hud.setCash(this.cash);
     this.hud.setRep(this.reputation);
+    // New rank? Toast what it just unlocked.
+    if (this.reputation !== this._lastRep) {
+      const lines = this.respect.latestUnlocks(this._lastRep, this.reputation);
+      if (lines.length > 0) this.hud.flashMessage(lines.join(' · '), 6);
+      this._lastRep = this.reputation;
+    }
+    const here = this.districts.current(player.position.x, player.position.z);
+    this.hud.setDistrict(here.name, here.standing, here.tier);
+    this.hud.setCrew(this.crew.list());
+    if (this.races.active) {
+      const pos = this.races.position(this);
+      this.hud.setRace({
+        place: pos.place, of: pos.of, name: this.races.def.name,
+        gate: this.races.gateIdx + 1, gates: this.races.def.gates.length,
+        timeLeft: this.races.def.timeLimit - this.races.timer,
+      });
+    } else {
+      this.hud.setRace(null);
+    }
     this.hud.setHealth(player.health, PLAYER_TUNING.maxHealth);
     this.hud.setSpeed(player.state === 'driving' && player.car ? player.car.speedKmh() : 0, player.state === 'driving');
     this.hud.setVehicle(player.state === 'driving' && player.car ? player.car.name : null, player.car ? player.car.health : 0);

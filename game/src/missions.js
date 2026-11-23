@@ -107,7 +107,7 @@ export const CHATTER = [
   ['Student', 'The sunset here is unreal. The traffic is worse.'],
 ];
 
-function makeBeacon(color) {
+export function makeBeacon(color) {
   const group = new THREE.Group();
   const beam = new THREE.Mesh(
     new THREE.CylinderGeometry(1.4, 1.9, 26, 12, 1, true),
@@ -206,7 +206,8 @@ export class MissionManager {
         return `${stage.text} — ${Math.max(0, Math.ceil(this.stageTimer))}s left`;
       }
       if (stage.kind === 'wait') {
-        return `${stage.text} — ${Math.max(0, Math.ceil(stage.seconds - this.stageTimer))}s`;
+        const total = this._waitSeconds || stage.seconds;
+        return `${stage.text} — ${Math.max(0, Math.ceil(total - this.stageTimer))}s`;
       }
       return stage.text;
     }
@@ -216,6 +217,11 @@ export class MissionManager {
 
   startMission(world) {
     if (this.active || this.remaining() <= 0) return false;
+    // The Last Tide needs a crew: Delgado won't send Mara in alone.
+    if (this.index === 8 && world.crew && world.crew.count() === 0) {
+      world.hud.flashMessage('The Last Tide needs a crew — recruit someone first (press C).', 5);
+      return false;
+    }
     this.def = MISSION_DEFS[this.index];
     this.active = true;
     this.stageIdx = 0;
@@ -223,6 +229,8 @@ export class MissionManager {
     this.beacon.visible = true;
     this._placeBeacon();
     this._runStageStart(world);
+    // Rook tops the ammo up at the start of every job.
+    if (world.crew && world.crew.has('rook')) world.combat.refillAmmo();
     world.hud.showMissionCard(this.def.title, this.def.briefing);
     world.audio.missionStart();
     return true;
@@ -238,10 +246,20 @@ export class MissionManager {
   _runStageStart(world) {
     const stage = this.currentStage();
     if (!stage) return;
-    this.stageTimer = stage.timeLimit || 0;
+    // Crew bonuses: Vega stretches timed stages, Iris cools the heat and
+    // cracks vaults faster.
+    this.stageTimer = (stage.timeLimit || 0) + (stage.timeLimit && world.crew ? world.crew.timeBonus : 0);
+    if (stage.kind === 'wait' && world.crew) {
+      this._waitSeconds = Math.max(8, stage.seconds - world.crew.waitReduction);
+    } else {
+      this._waitSeconds = stage.seconds || 0;
+    }
     if (stage.heatOnStart) {
-      world.police.setWanted(stage.heatOnStart);
-      world.hud.flashMessage(`${stage.heatOnStart} stars — the whole PD is on you. RUN.`);
+      const heat = Math.max(0, stage.heatOnStart - (world.crew ? world.crew.heatReduction : 0));
+      if (heat > 0) {
+        world.police.setWanted(heat);
+        world.hud.flashMessage(`${heat} stars — the whole PD is on you. RUN.`);
+      }
     }
     if (stage.line) {
       world.hud.showDialogue(stage.line[0], stage.line[1], 5.5);
@@ -268,6 +286,12 @@ export class MissionManager {
     this.beacon.visible = false;
     world.cash += reward;
     world.reputation += 1;
+    // The district where the job ended remembers reliable work.
+    if (world.districts) {
+      const here = world.districts.current(world.player.position.x, world.player.position.z);
+      const tier = world.districts.addStanding(here.id, 12);
+      if (tier) world.hud.flashMessage(`${here.name} standing is now ${tier}.`, 4);
+    }
     world.police.clearWanted();
     world.saveGame();
     world.hud.showMissionComplete(title, line, reward, this.remaining() > 0 ? MISSION_DEFS[this.index].title : null);
@@ -332,7 +356,7 @@ export class MissionManager {
     } else if (stage.kind === 'wait') {
       if (d < 9) {
         this.stageTimer += dt;
-        if (this.stageTimer >= stage.seconds) this._advanceStage(world);
+        if (this.stageTimer >= (this._waitSeconds || stage.seconds)) this._advanceStage(world);
       } else {
         this.stageTimer = Math.max(0, this.stageTimer - dt * 2); // leaving resets progress
       }

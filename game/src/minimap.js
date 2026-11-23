@@ -1,6 +1,6 @@
 // Minimap: a north-up 2D canvas that redraws the city grid, the player
 // arrow, mission blips, police and cash every frame.
-import { CITY } from './config.js';
+import { CITY, PLACES } from './config.js';
 
 export class Minimap {
   constructor(canvas, city) {
@@ -91,6 +91,28 @@ export class Minimap {
       ctx.strokeStyle = 'rgba(0,0,0,0.6)';
       ctx.stroke();
     }
+    // Race: next checkpoint blip (orange), the Bowl start and Rosa's garage.
+    if (world.races && world.races.active) {
+      const gate = world.races.nextGatePlace();
+      if (gate) {
+        const p = this._toMap(gate.x, gate.z);
+        const pulse = 4 + Math.sin(this.flash * 2) * 1.5;
+        ctx.fillStyle = '#ff9a3c';
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y - pulse);
+        ctx.lineTo(p.x + pulse, p.y);
+        ctx.lineTo(p.x, p.y + pulse);
+        ctx.lineTo(p.x - pulse, p.y);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    ctx.fillStyle = '#c77dff';
+    const g = this._toMap(PLACES.chopGarage.x, PLACES.chopGarage.z);
+    ctx.fillRect(g.x - 2.5, g.y - 2.5, 5, 5);
+    ctx.fillStyle = '#ff9a3c';
+    const b = this._toMap(PLACES.bowl.x, PLACES.bowl.z);
+    ctx.fillRect(b.x - 2.5, b.y - 2.5, 5, 5);
     // Police: flashing red/blue.
     const policeColor = Math.floor(this.flash * 2) % 2 === 0 ? '#ff4444' : '#4488ff';
     ctx.fillStyle = policeColor;
